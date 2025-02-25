@@ -1,5 +1,5 @@
 import * as express from 'express';
-import fetch from 'node-fetch';
+import axios from 'axios';
 import * as sharp from 'sharp';
 import { AvailableFormatInfo, FormatEnum } from 'sharp';
 
@@ -9,16 +9,16 @@ const app = express();
 
 const fetchImage = async (url: string) => {
   try {
-    const fetchReq = await fetch(url, { method: 'GET' });
+    const fetchReq = await axios.get(url, { responseType: 'arraybuffer' });
 
     let format = url.split('.').pop();
-    if (fetchReq.headers.has('content-type') && fetchReq.headers.get('content-type').startsWith('image/')) {
-      format = fetchReq.headers.get('content-type').replace('image/', '');
+    if (fetchReq.headers['content-type'] && fetchReq.headers['content-type'].startsWith('image/')) {
+      format = fetchReq.headers['content-type'].replace('image/', '');
     }
 
     return {
       status: fetchReq.status,
-      buffer: await fetchReq.buffer(),
+      buffer: Buffer.from(fetchReq.data, 'binary'),
       format: format
     }
   } catch (e) {
@@ -46,6 +46,8 @@ app.get('/', async (req, res) => {
     res.status(400).send("Image not found");
     return;
   }
+
+  console.log(`Request: ${req.url}`);
 
   const format = (req.query.format) ? req.query.format.toString() : image.format;
   const toFormat: keyof FormatEnum | AvailableFormatInfo = (format === "avif") ? "heif" : format as any;
